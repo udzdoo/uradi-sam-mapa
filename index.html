@@ -2,106 +2,163 @@
 <html lang="sr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lokacije Prodavnica</title>
   <style>
     body {
       margin: 0;
-      padding: 0;
       font-family: 'Segoe UI', sans-serif;
       background: #f0f2f5;
+      padding: 20px;
     }
-    .vf-container {
-      width: 100%;
-      height: 300px;
-      display: flex;
-      flex-direction: column;
-    }
-    .header {
-      background: #2c3e50;
-      color: white;
-      padding: 10px;
+    
+    h3 {
       text-align: center;
-      font-size: 18px;
-      border-radius: 5px 5px 0 0;
+      color: #2c3e50;
+      margin-bottom: 20px;
     }
-    .content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    
+    #map {
+      height: 400px;
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .zoom-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 10px;
       background: white;
-      border: 1px solid #ddd;
-      border-top: none;
-      border-radius: 0 0 5px 5px;
-      overflow: hidden;
+      padding: 6px;
+      border-radius: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      z-index: 5;
     }
-    .select-container {
-      padding: 10px;
+    
+    .zoom-controls button {
+      display: block;
+      width: 30px;
+      height: 30px;
+      margin: 3px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 3px;
     }
+    
+    .zoom-controls button:hover {
+      background: #0056b3;
+    }
+    
+    .selection-container {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
     label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2c3e50;
     }
+    
     select {
+      padding: 10px;
+      font-size: 16px;
       width: 100%;
-      padding: 8px;
+      border-radius: 5px;
       border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
+      box-sizing: border-box;
+      background-color: white;
     }
-    #map {
-      flex: 1;
-      border-top: 1px solid #eee;
-    }
+    
     .infowindow {
-      max-width: 250px;
-      font-size: 13px;
-      line-height: 1.4;
+      max-width: 260px;
+      font-size: 14px;
+      padding: 8px;
     }
-    .infowindow strong {
-      display: block;
-      margin-bottom: 5px;
-    }
+    
     .hours-toggle {
-      color: #0066cc;
       cursor: pointer;
+      color: #007bff;
       text-decoration: underline;
-      margin: 5px 0;
+      margin: 6px 0;
       display: inline-block;
     }
+    
     .full-hours {
-      font-size: 12px;
-      margin-top: 5px;
+      display: none;
+      margin-top: 6px;
+      border-top: 1px solid #eee;
+      padding-top: 6px;
     }
+    
     .open-status {
       font-weight: bold;
-      margin-top: 5px;
-      font-size: 13px;
+      margin-top: 8px;
+      padding: 4px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .open {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .closed {
+      background-color: #f8d7da;
+      color: #721c24;
     }
   </style>
 </head>
 <body>
-  <div class="vf-container">
-    <div class="header">📍 Lokacije Prodavnica</div>
-    <div class="content">
-      <div class="select-container">
-        <label for="citySelect">Izaberi grad:</label>
-        <select id="citySelect">
-          <option value="all">-- Prikaži sve --</option>
-        </select>
-      </div>
-      <div id="map"></div>
-    </div>
+  <h3>Lokacije Prodavnica</h3>
+  
+  <div class="selection-container">
+    <label for="citySelect">Izaberi grad:</label>
+    <select id="citySelect">
+      <option value="all">-- Prikaži sve --</option>
+    </select>
+  </div>
+  
+  <div id="map"></div>
+  <div class="zoom-controls">
+    <button onclick="zoomIn()">+</button>
+    <button onclick="zoomOut()">-</button>
   </div>
 
   <script>
     const storeData = [
-      { city: "Beograd", name: "Roda Centar", address: "Đorđa Stanojevića 35, Novi Beograd, Srbija", phone: "011/123-456", hours: {
+      { city: "Beograd", name: "Roda Centar", address: "Đorđa Stanojevića 35, Novi Beograd, Srbija", phone: "011/123-456", image: "https://via.placeholder.com/100", hours: {
         "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
         "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
       }},
-      { city: "Beograd", name: "Roda Centar", address: "Pilota Mihaila Petrovića 72, Beograd, Srbija", phone: "011/678-901", hours: {
+      { city: "Beograd", name: "Roda Centar", address: "Pilota Mihaila Petrovića 72, Beograd, Srbija", phone: "011/678-901", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Beograd", name: "Roda Centar", address: "Put za Ada Huju 9, Beograd, Srbija", phone: "011/901-234", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Novi Sad", name: "Roda Centar", address: "Bulevar vojvode Stepe 48, Novi Sad, Srbija", phone: "021/345-678", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Pančevo", name: "Roda Centar", address: "Miloša Obrenovića 12, Pančevo, Srbija", phone: "013/789-012", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Zrenjanin", name: "Roda Centar", address: "Bagljas zapad 5, Zrenjanin, Srbija", phone: "023/890-123", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Šabac", name: "Roda Centar", address: "Janka Veselinovića bb, Šabac, Srbija", phone: "015/234-567", image: "https://via.placeholder.com/100", hours: {
         "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
         "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
       }}
@@ -112,18 +169,17 @@
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 44.7866, lng: 20.4489 },
-        zoom: 12,
-        zoomControl: true,
+        zoom: 6,
+        zoomControl: false,
         streetViewControl: false,
-        mapTypeControl: false,
-        fullscreenControl: false
+        mapTypeControl: false
       });
 
       geocoder = new google.maps.Geocoder();
 
       const citySelect = document.getElementById("citySelect");
-      const cities = [...new Set(storeData.map(store => store.city))];
-      
+      const cities = ["Beograd", "Novi Sad", "Pančevo", "Zrenjanin", "Šabac"];
+
       cities.forEach(city => {
         const option = document.createElement("option");
         option.value = city;
@@ -133,18 +189,28 @@
 
       citySelect.addEventListener("change", () => {
         const selectedCity = citySelect.value;
-        const filteredStores = selectedCity === "all" 
-          ? storeData 
-          : storeData.filter(store => store.city === selectedCity);
+        const filteredStores = selectedCity === "all"
+          ? storeData
+          : storeData.filter(loc => loc.city === selectedCity);
         clearMarkers();
         showMarkers(filteredStores);
-        
-        if (filteredStores.length === 1) {
-          map.setZoom(15);
-        }
       });
 
       showMarkers(storeData);
+    }
+
+    function zoomIn() {
+      let currentZoom = map.getZoom();
+      if (currentZoom < 20) {
+        map.setZoom(currentZoom + 1);
+      }
+    }
+
+    function zoomOut() {
+      let currentZoom = map.getZoom();
+      if (currentZoom > 2) {
+        map.setZoom(currentZoom - 1);
+      }
     }
 
     function clearMarkers() {
@@ -152,13 +218,56 @@
       markers = [];
     }
 
+    function isStoreOpen(hours) {
+      const days = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
+      const now = new Date();
+      const day = days[now.getDay()];
+      const currentTime = now.toTimeString().slice(0,5);
+
+      if (!hours[day]) return false;
+      const [open, close] = hours[day];
+      return currentTime >= open && currentTime <= close;
+    }
+
+    function createInfoWindowContent(store) {
+      const isOpen = isStoreOpen(store.hours);
+      const openStatus = isOpen ? "✅ Otvoreno" : "❌ Zatvoreno";
+      const statusClass = isOpen ? "open" : "closed";
+
+      let hoursHTML = "";
+      for (const [day, [from, to]] of Object.entries(store.hours)) {
+        hoursHTML += `<div>${day}: ${from} - ${to}</div>`;
+      }
+
+      return `
+        <div class="infowindow">
+          <strong>${store.name}</strong><br>
+          ${store.address}<br>
+          <b>Telefon:</b> ${store.phone}<br>
+          <div class="hours-toggle" onclick="toggleHours(this)">Radno vreme</div>
+          <div class="full-hours">${hoursHTML}</div>
+          <div class="open-status ${statusClass}">${openStatus}</div>
+        </div>
+      `;
+    }
+
+    function toggleHours(element) {
+      const details = element.nextElementSibling;
+      details.style.display = details.style.display === "none" ? "block" : "none";
+    }
+
+    window.toggleHours = toggleHours;
+
     function showMarkers(stores) {
       const bounds = new google.maps.LatLngBounds();
-      
+      let geocodedCount = 0;
+
       stores.forEach(store => {
         geocoder.geocode({ address: store.address }, (results, status) => {
+          geocodedCount++;
           if (status === "OK" && results[0]) {
             const location = results[0].geometry.location;
+
             const marker = new google.maps.Marker({
               map,
               position: location,
@@ -177,57 +286,23 @@
 
             markers.push(marker);
             bounds.extend(location);
-            
+          }
+
+          if (geocodedCount === stores.length) {
             if (stores.length > 1) {
               map.fitBounds(bounds);
             } else {
-              map.setCenter(location);
-              map.setZoom(15);
+              map.setCenter(bounds.getCenter());
+              map.setZoom(13);
             }
           }
         });
       });
     }
-
-    function createInfoWindowContent(store) {
-      const openStatus = isStoreOpen(store.hours) ? "✅ Otvoreno" : "❌ Zatvoreno";
-      
-      let hoursHTML = '';
-      for (const [day, hours] of Object.entries(store.hours)) {
-        hoursHTML += `<div>${day}: ${hours[0]} - ${hours[1]}</div>`;
-      }
-
-      return `
-        <div class="infowindow">
-          <strong>${store.name}</strong>
-          <div>${store.address}</div>
-          <div><b>Telefon:</b> ${store.phone}</div>
-          <div class="hours-toggle" onclick="toggleHours(this)">▼ Radno vreme</div>
-          <div class="full-hours" style="display:none">${hoursHTML}</div>
-          <div class="open-status">${openStatus}</div>
-        </div>
-      `;
-    }
-
-    function isStoreOpen(hours) {
-      const days = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
-      const now = new Date();
-      const day = days[now.getDay()];
-      const currentTime = now.toTimeString().substr(0, 5);
-      
-      if (!hours[day]) return false;
-      return currentTime >= hours[day][0] && currentTime <= hours[day][1];
-    }
-
-    function toggleHours(element) {
-      const details = element.nextElementSibling;
-      details.style.display = details.style.display === "none" ? "block" : "none";
-      element.textContent = details.style.display === "none" ? "▼ Radno vreme" : "▲ Radno vreme";
-    }
-
-    window.toggleHours = toggleHours;
   </script>
 
-  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDOnUBcLX02oRYFR9sLrBISoOgOz9ziliU&callback=initMap"></script>
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDOnUBcLX02oRYFR9sLrBISoOgOz9ziliU&callback=initMap">
+  </script>
 </body>
 </html>
