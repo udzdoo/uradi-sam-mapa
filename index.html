@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Lokacije Prodavnica</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+    }
+    header {
+      padding: 20px;
+      text-align: center;
+      background: #2c3e50;
+      color: white;
+      font-size: 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    select {
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      max-width: 300px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+    #map {
+      width: 100%;
+      height: 600px;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+    }
+    .infowindow {
+      max-width: 260px;
+      font-size: 14px;
+    }
+    .hours-toggle {
+      cursor: pointer;
+      color: #007bff;
+      text-decoration: underline;
+    }
+    .full-hours {
+      display: none;
+      margin-top: 6px;
+    }
+    .open-status {
+      font-weight: bold;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>📍 Lokacije Prodavnica</header>
+  <div class="container">
+    <label for="citySelect">Izaberi grad:</label><br>
+    <select id="citySelect">
+      <option value="all">-- Prikaži sve --</option>
+    </select>
+    <div id="map"></div>
+  </div>
+
+  <script>
+    const storeData = [
+      { city: "Beograd", name: "Roda Centar", address: "Đorđa Stanojevića 35, Novi Beograd, Srbija", phone: "011/123-456", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Beograd", name: "Roda Centar", address: "Pilota Mihaila Petrovića 72, Beograd, Srbija", phone: "011/678-901", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Beograd", name: "Roda Centar", address: "Put za Ada Huju 9, Beograd, Srbija", phone: "011/901-234", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Novi Sad", name: "Roda Centar", address: "Bulevar vojvode Stepe 48, Novi Sad, Srbija", phone: "021/345-678", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Pančevo", name: "Roda Centar", address: "Miloša Obrenovića 12, Pančevo, Srbija", phone: "013/789-012", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Zrenjanin", name: "Roda Centar", address: "Bagljas zapad 5, Zrenjanin, Srbija", phone: "023/890-123", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }},
+      { city: "Šabac", name: "Roda Centar", address: "Janka Veselinovića bb, Šabac, Srbija", phone: "015/234-567", image: "https://via.placeholder.com/100", hours: {
+        "Ponedeljak": ["08:00", "21:00"], "Utorak": ["08:00", "21:00"], "Sreda": ["08:00", "21:00"],
+        "Četvrtak": ["08:00", "21:00"], "Petak": ["08:00", "21:00"], "Subota": ["09:00", "20:00"], "Nedelja": ["10:00", "18:00"]
+      }}
+    ];
+
+    let map, geocoder, markers = [], activeInfoWindow = null;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 44.7866, lng: 20.4489 },
+        zoom: 7,
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false
+      });
+
+      geocoder = new google.maps.Geocoder();
+
+      const citySelect = document.getElementById("citySelect");
+      const cities = ["Beograd", "Novi Sad", "Pančevo", "Zrenjanin", "Šabac"];
+
+      cities.forEach(city => {
+        const option = document.createElement("option");
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+      });
+
+      citySelect.addEventListener("change", () => {
+        const selectedCity = citySelect.value;
+        const filteredStores = selectedCity === "all"
+          ? storeData
+          : storeData.filter(loc => loc.city === selectedCity);
+        clearMarkers();
+        showMarkers(filteredStores);
+      });
+
+      showMarkers(storeData);
+    }
+
+    function clearMarkers() {
+      markers.forEach(marker => marker.setMap(null));
+      markers = [];
+    }
+
+    function isStoreOpen(hours) {
+      const days = ["Nedelja", "Ponedeljak", "Utorak", "Sreda", "Četvrtak", "Petak", "Subota"];
+      const now = new Date();
+      const day = days[now.getDay()];
+      const currentTime = now.toTimeString().slice(0,5);
+
+      if (!hours[day]) return false;
+      const [open, close] = hours[day];
+      return currentTime >= open && currentTime <= close;
+    }
+
+    function createInfoWindowContent(store) {
+      const openStatus = isStoreOpen(store.hours) ? "✅ Otvoreno" : "❌ Zatvoreno";
+
+      let hoursHTML = "";
+      for (const [day, [from, to]] of Object.entries(store.hours)) {
+        hoursHTML += `<div>${day}: ${from} - ${to}</div>`;
+      }
+
+      return `
+        <div class="infowindow">
+          <strong>${store.name}</strong><br>
+          ${store.address}<br>
+          <b>Telefon:</b> ${store.phone}<br>
+          <div class="hours-toggle" onclick="toggleHours(this)">Radno vreme</div>
+          <div class="full-hours" style="display:none;">${hoursHTML}</div>
+          <div class="open-status">${openStatus}</div>
+        </div>
+      `;
+    }
+
+    function toggleHours(element) {
+      const details = element.nextElementSibling;
+      details.style.display = details.style.display === "none" ? "block" : "none";
+    }
+
+    window.toggleHours = toggleHours;
+
+    function showMarkers(stores) {
+      const bounds = new google.maps.LatLngBounds();
+      let geocodedCount = 0;
+
+      stores.forEach(store => {
+        geocoder.geocode({ address: store.address }, (results, status) => {
+          geocodedCount++;
+          if (status === "OK" && results[0]) {
+            const location = results[0].geometry.location;
+
+            const marker = new google.maps.Marker({
+              map,
+              position: location,
+              title: store.name
+            });
+
+            const infoWindow = new google.maps.InfoWindow({
+              content: createInfoWindowContent(store)
+            });
+
+            marker.addListener("click", () => {
+              if (activeInfoWindow) activeInfoWindow.close();
+              infoWindow.open(map, marker);
+              activeInfoWindow = infoWindow;
+            });
+
+            markers.push(marker);
+            bounds.extend(location);
+          }
+
+          if (geocodedCount === stores.length) {
+            if (stores.length > 1) {
+              map.fitBounds(bounds);
+            } else {
+              map.setCenter(bounds.getCenter());
+              map.setZoom(13);
+            }
+          }
+        });
+      });
+    }
+  </script>
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
+  </script>
+</body>
+</html>
